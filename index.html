@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Dicionário dos Memes</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+        }
+
+        header {
+            padding: 30px;
+            text-align: center;
+            background: #181818;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+        }
+
+        #total {
+            color: #aaa;
+            font-size: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 30px;
+        }
+
+        .search {
+            width: 100%;
+            padding: 15px 18px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            background: #222;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search:focus {
+            border-color: #666;
+        }
+
+        .search::placeholder {
+            color: #777;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #292929;
+            color: white;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        button.active {
+            background: #4a6fa5;
+            box-shadow: 0 0 0 2px #6b9bd666;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: #1d1d1d;
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid #333;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            border-color: #777;
+            background: #222;
+        }
+
+        .card:active {
+            transform: translateY(-1px);
+        }
+
+        .number {
+            color: #777;
+            font-size: 12px;
+        }
+
+        .name {
+            margin-top: 8px;
+            font-size: 17px;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        .category {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #aaa;
+            display: inline-block;
+            padding: 3px 8px;
+            background: #2a2a2a;
+            border-radius: 6px;
+        }
+
+        .empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #777;
+            font-size: 16px;
+        }
+
+        .loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #aaa;
+            font-size: 16px;
+        }
+
+        .error {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #ff6b6b;
+            font-size: 16px;
+        }
+
+        .name-box {
+            margin-bottom: 5px;
+        }
+
+        .name-info {
+            color: #777;
+            font-size: 13px;
+            margin: -5px 0 15px;
+        }
+
+    </style>
+</head>
+
+
+<body>
+
+
+<header>
+
+    <h1>
+        📂🌐 Todos os Memes 🌐📂
+    </h1>
+
+    <div id="total">
+        Carregando...
+    </div>
+
+</header>
+
+
+<div class="container">
+
+
+    <!-- ====================================== -->
+    <!-- NOME DO VISITANTE -->
+    <!-- ====================================== -->
+
+    <div class="name-box">
+
+        <input
+            id="nome"
+            class="search"
+            type="text"
+            placeholder="Digite seu nome..."
+            aria-label="Seu nome"
+            autocomplete="name"
+        >
+
+        <div class="name-info">
+            Seu nome será usado para identificar suas interações.
+        </div>
+
+    </div>
+
+
+    <!-- ====================================== -->
+    <!-- PESQUISA -->
+    <!-- ====================================== -->
+
+    <input
+        id="search"
+        class="search"
+        type="text"
+        placeholder="Pesquisar Memes..."
+        aria-label="Pesquisar Memes"
+        autocomplete="off"
+    >
+
+
+    <!-- ====================================== -->
+    <!-- FILTROS -->
+    <!-- ====================================== -->
+
+    <div
+        class="filters"
+        role="group"
+        aria-label="Filtros por categoria"
+    >
+
+        <button
+            data-category="all"
+            class="active"
+        >
+            Todos
+        </button>
+
+        <button data-category="common">
+            Common
+        </button>
+
+        <button data-category="rare">
+            Rare
+        </button>
+
+        <button data-category="epic">
+            Epic
+        </button>
+
+        <button data-category="legendary">
+            Legendary
+        </button>
+
+        <button data-category="mythic">
+            Mythic
+        </button>
+
+        <button data-category="brainrot_god">
+            Brainrot God
+        </button>
+
+        <button data-category="secret">
+            Secret
+        </button>
+
+        <button data-category="og">
+            OG
+        </button>
+
+    </div>
+
+
+    <!-- ====================================== -->
+    <!-- LISTA -->
+    <!-- ====================================== -->
+
+    <div id="grid"></div>
+
+
+</div>
+
+
+<script>
+
+    // ============================================
+    // VARIÁVEIS
+    // ============================================
+
+    let allBrainrots = [];
+
+    let currentList = [];
+
+    let currentCategory = "all";
+
+
+    const totalEl =
+        document.getElementById("total");
+
+    const gridEl =
+        document.getElementById("grid");
+
+    const searchEl =
+        document.getElementById("search");
+
+    const nomeEl =
+        document.getElementById("nome");
+
+    const categoryButtons =
+        document.querySelectorAll(
+            "[data-category]"
+        );
+
+
+    // ============================================
+    // CATEGORIA ATIVA
+    // ============================================
+
+    function setActiveCategoryBtn(category) {
+
+        categoryButtons.forEach(btn => {
+
+            btn.classList.toggle(
+                "active",
+                btn.dataset.category === category
+            );
+
+        });
+
+    }
+
+
+    // ============================================
+    // LOADING
+    // ============================================
+
+    function showLoading(
+        message = "Carregando..."
+    ) {
+
+        gridEl.innerHTML = `
+            <div class="loading">
+                ${message}
+            </div>
+        `;
+
+    }
+
+
+    // ============================================
+    // ERRO
+    // ============================================
+
+    function showError(
+        message = "Erro ao carregar os dados."
+    ) {
+
+        gridEl.innerHTML = `
+            <div class="error">
+                ❌ ${message}
+            </div>
+        `;
+
+    }
+
+
+    // ============================================
+    // ESCAPAR HTML
+    // ============================================
+
+    function escapeHtml(text) {
+
+        const div =
+            document.createElement("div");
+
+        div.textContent = text;
+
+        return div.innerHTML;
+
+    }
+
+
+    // ============================================
+    // PEGAR NOME
+    // ============================================
+
+    function getNomeUsuario() {
+
+        return nomeEl.value.trim();
+
+    }
+
+
+    // ============================================
+    // ENVIAR DADOS PARA O FLASK
+    // ============================================
+
+    async function registrarDado(dados) {
+
+        const nome =
+            getNomeUsuario();
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/gravar",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            nome: nome,
+
+                            pesquisa:
+                                dados.pesquisa || "",
+
+                            brainrot_clicado:
+                                dados.brainrot_clicado || ""
+
+                        })
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                console.error(
+                    "Erro ao gravar dados:",
+                    response.status
+                );
+
+                return;
+
+            }
+
+
+            const resultado =
+                await response.json();
+
+
+            console.log(
+                "✅ Dados registrados:",
+                resultado
+            );
+
+
+        } catch (erro) {
+
+            console.error(
+                "❌ Erro ao enviar dados para o Flask:",
+                erro
+            );
+
+        }
+
+    }
+
+
+    // ============================================
+    // RENDERIZAR BRAINROTS
+    // ============================================
+
+    function render(lista) {
+
+        gridEl.innerHTML = "";
+
+
+        if (!lista.length) {
+
+            gridEl.innerHTML = `
+                <div class="empty">
+                    Nenhum meme encontrado 😕
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        lista.forEach((item, index) => {
+
+
+            /*
+             * O Flask atualmente retorna strings:
+             *
+             * "Noobini Pizzanini"
+             *
+             * Por isso usamos:
+             *
+             * item.name || item
+             */
+
+            const nomeBrainrot =
+                item.name || item;
+
+
+            const card =
+                document.createElement("div");
+
+
+            card.className =
+                "card";
+
+
+            // ====================================
+            // CLIQUE NO BRAINROT
+            // ====================================
+
+            card.addEventListener(
+                "click",
+                () => {
+
+                    const pesquisaAtual =
+                        searchEl.value.trim();
+
+
+                    registrarDado({
+
+                        pesquisa:
+                            pesquisaAtual,
+
+                        brainrot_clicado:
+                            nomeBrainrot
+
+                    });
+
+                }
+            );
+
+
+            // ====================================
+            // CONTEÚDO DO CARD
+            // ====================================
+
+            card.innerHTML = `
+
+                <div class="number">
+                    #${index + 1}
+                </div>
+
+                <div class="name">
+                    ${escapeHtml(nomeBrainrot)}
+                </div>
+
+                ${
+                    item.category
+                    ?
+                    `
+                    <div class="category">
+                        ${escapeHtml(
+                            item.category
+                        )}
+                    </div>
+                    `
+                    :
+                    ""
+                }
+
+            `;
+
+
+            gridEl.appendChild(card);
+
+
+        });
+
+    }
+
+
+    // ============================================
+    // PESQUISA LOCAL
+    // ============================================
+
+    function applySearch(query) {
+
+        const term =
+            query.trim().toLowerCase();
+
+
+        if (!term) {
+
+            render(currentList);
+
+            return;
+
+        }
+
+
+        const resultados =
+            currentList.filter(item => {
+
+                const nome =
+                    (
+                        item.name || item
+                    ).toLowerCase();
+
+
+                return nome.includes(term);
+
+            });
+
+
+        render(resultados);
+
+    }
+
+
+    // ============================================
+    // CARREGAR TODOS OS BRAINROTS
+    // ============================================
+
+    async function loadData() {
+
+        try {
+
+            showLoading(
+                "Carregando lista de memes..."
+            );
+
+
+            const response =
+                await fetch(
+                    "/api/brainrots"
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Resposta inválida"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            allBrainrots =
+                data.brainrots || [];
+
+
+            currentList =
+                [...allBrainrots];
+
+
+            totalEl.textContent =
+                `${data.total} Memes`;
+
+
+            render(currentList);
+
+
+        } catch (err) {
+
+            console.error(err);
+
+
+            showError(
+                "Não foi possível carregar a lista."
+            );
+
+
+            totalEl.textContent =
+                "Erro ao carregar";
+
+        }
+
+    }
+
+
+    // ============================================
+    // CARREGAR CATEGORIA
+    // ============================================
+
+    async function loadCategory(
+        category
+    ) {
+
+        currentCategory =
+            category;
+
+
+        setActiveCategoryBtn(
+            category
+        );
+
+
+        searchEl.value = "";
+
+
+        try {
+
+
+            if (category === "all") {
+
+                currentList =
+                    [...allBrainrots];
+
+
+                render(currentList);
+
+                return;
+
+            }
+
+
+            showLoading(
+                "Carregando categoria..."
+            );
+
+
+            const response =
+                await fetch(
+                    `/api/brainrots/${encodeURIComponent(
+                        category
+                    )}`
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Resposta inválida"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            currentList =
+                data.brainrots || [];
+
+
+            render(currentList);
+
+
+        } catch (err) {
+
+            console.error(err);
+
+
+            showError(
+                "Não foi possível carregar esta categoria."
+            );
+
+        }
+
+    }
+
+
+    // ============================================
+    // DIGITAÇÃO DA PESQUISA
+    // ============================================
+
+    searchEl.addEventListener(
+        "input",
+        e => {
+
+            applySearch(
+                e.target.value
+            );
+
+        }
+    );
+
+
+    // ============================================
+    // REGISTRAR PESQUISA
+    // ============================================
+
+    searchEl.addEventListener(
+        "keydown",
+        e => {
+
+
+            if (e.key !== "Enter") {
+                return;
+            }
+
+
+            const pesquisa =
+                searchEl.value.trim();
+
+
+            if (!pesquisa) {
+                return;
+            }
+
+
+            registrarDado({
+
+                pesquisa:
+                    pesquisa,
+
+                brainrot_clicado:
+                    ""
+
+            });
+
+
+            console.log(
+                "🔎 Pesquisa registrada:",
+                pesquisa
+            );
+
+
+        }
+    );
+
+
+    // ============================================
+    // BOTÕES DE CATEGORIA
+    // ============================================
+
+    categoryButtons.forEach(btn => {
+
+
+        btn.addEventListener(
+            "click",
+            () => {
+
+                loadCategory(
+                    btn.dataset.category
+                );
+
+            }
+        );
+
+
+    });
+
+
+    // ============================================
+    // INICIAR SITE
+    // ============================================
+
+    loadData();
+
+
+</script>
+
+
+</body>
+
+</html>
