@@ -29,6 +29,7 @@
             text-align: center;
             background: #181818;
             border-bottom: 1px solid #2a2a2a;
+            position: relative;
         }
 
         h1 {
@@ -167,14 +168,130 @@
             font-size: 16px;
         }
 
-        .name-box {
-            margin-bottom: 5px;
+        /* ============================================ */
+        /* CABEÇALHO DO USUÁRIO LOGADO */
+        /* ============================================ */
+
+        .user-bar {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #ccc;
         }
 
-        .name-info {
-            color: #777;
+        .user-bar button {
+            padding: 6px 12px;
             font-size: 13px;
-            margin: -5px 0 15px;
+            background: #3a2323;
+        }
+
+        .user-bar button:hover {
+            background: #5a2f2f;
+        }
+
+        /* ============================================ */
+        /* TELA DE LOGIN / CADASTRO */
+        /* ============================================ */
+
+        #auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        #auth-overlay.hidden {
+            display: none;
+        }
+
+        .auth-box {
+            width: 100%;
+            max-width: 380px;
+            background: #181818;
+            border: 1px solid #2a2a2a;
+            border-radius: 14px;
+            padding: 32px;
+        }
+
+        .auth-box h2 {
+            margin: 0 0 6px;
+            text-align: center;
+        }
+
+        .auth-subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .auth-box label {
+            display: block;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+
+        .auth-box .search {
+            margin-bottom: 16px;
+        }
+
+        .auth-submit {
+            width: 100%;
+            padding: 13px;
+            background: #4a6fa5;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .auth-submit:hover {
+            background: #5a82bd;
+        }
+
+        .auth-submit:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .auth-toggle a {
+            color: #6b9bd6;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .auth-message {
+            min-height: 18px;
+            text-align: center;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .auth-message.error {
+            color: #ff6b6b;
+        }
+
+        .auth-message.success {
+            color: #7bd67b;
+        }
+
+        #app-content.hidden {
+            display: none;
         }
 
     </style>
@@ -184,116 +301,191 @@
 <body>
 
 
-<header>
+<!-- ====================================== -->
+<!-- TELA DE LOGIN / CADASTRO -->
+<!-- ====================================== -->
 
-    <h1>
-        📂🌐 Todos os Memes 🌐📂
-    </h1>
+<div id="auth-overlay" class="hidden">
 
-    <div id="total">
-        Carregando...
-    </div>
+    <div class="auth-box">
 
-</header>
+        <h2 id="auth-title">Entrar</h2>
 
+        <div id="auth-subtitle" class="auth-subtitle">
+            Faça login para ver os memes
+        </div>
 
-<div class="container">
+        <div id="auth-message" class="auth-message"></div>
 
+        <form id="auth-form" autocomplete="on">
 
-    <!-- ====================================== -->
-    <!-- NOME DO VISITANTE -->
-    <!-- ====================================== -->
+            <label for="auth-username">E-mail</label>
 
-    <div class="name-box">
+            <input
+                id="auth-username"
+                class="search"
+                type="email"
+                placeholder="seuemail@exemplo.com"
+                autocomplete="email"
+                required
+            >
 
-        <input
-            id="nome"
-            class="search"
-            type="text"
-            placeholder="Digite seu nome..."
-            aria-label="Seu nome"
-            autocomplete="name"
-        >
+            <label for="auth-password">Senha</label>
 
-        <div class="name-info">
-            Seu nome será usado para identificar suas interações.
+            <input
+                id="auth-password"
+                class="search"
+                type="password"
+                placeholder="Sua senha"
+                autocomplete="current-password"
+                required
+            >
+
+            <div id="auth-confirm-wrap" style="display: none;">
+
+                <label for="auth-confirm">Confirmar senha</label>
+
+                <input
+                    id="auth-confirm"
+                    class="search"
+                    type="password"
+                    placeholder="Confirme sua senha"
+                    autocomplete="new-password"
+                >
+
+            </div>
+
+            <button
+                id="auth-submit-btn"
+                type="submit"
+                class="auth-submit"
+            >
+                Entrar
+            </button>
+
+        </form>
+
+        <div class="auth-toggle">
+
+            <span id="auth-toggle-login-text">
+                Ainda não tem conta?
+                <a id="auth-toggle-link">Cadastre-se</a>
+            </span>
+
         </div>
 
     </div>
 
-
-    <!-- ====================================== -->
-    <!-- PESQUISA -->
-    <!-- ====================================== -->
-
-    <input
-        id="search"
-        class="search"
-        type="text"
-        placeholder="Pesquisar Memes..."
-        aria-label="Pesquisar Memes"
-        autocomplete="off"
-    >
+</div>
 
 
-    <!-- ====================================== -->
-    <!-- FILTROS -->
-    <!-- ====================================== -->
+<!-- ====================================== -->
+<!-- CONTEÚDO PRINCIPAL DO SITE -->
+<!-- ====================================== -->
 
-    <div
-        class="filters"
-        role="group"
-        aria-label="Filtros por categoria"
-    >
+<div id="app-content" class="hidden">
 
-        <button
-            data-category="all"
-            class="active"
+
+    <header>
+
+        <h1>
+            📂🌐 Todos os Memes 🌐📂
+        </h1>
+
+        <div id="total">
+            Carregando...
+        </div>
+
+        <div class="user-bar">
+
+            <span id="user-label"></span>
+
+            <button id="logout-btn" type="button">
+                Sair
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <div class="container">
+
+
+        <!-- ====================================== -->
+        <!-- PESQUISA -->
+        <!-- ====================================== -->
+
+        <input
+            id="search"
+            class="search"
+            type="text"
+            placeholder="Pesquisar Memes..."
+            aria-label="Pesquisar Memes"
+            autocomplete="off"
         >
-            Todos
-        </button>
 
-        <button data-category="common">
-            Common
-        </button>
 
-        <button data-category="rare">
-            Rare
-        </button>
+        <!-- ====================================== -->
+        <!-- FILTROS -->
+        <!-- ====================================== -->
 
-        <button data-category="epic">
-            Epic
-        </button>
+        <div
+            class="filters"
+            role="group"
+            aria-label="Filtros por categoria"
+        >
 
-        <button data-category="legendary">
-            Legendary
-        </button>
+            <button
+                data-category="all"
+                class="active"
+            >
+                Todos
+            </button>
 
-        <button data-category="mythic">
-            Mythic
-        </button>
+            <button data-category="common">
+                Common
+            </button>
 
-        <button data-category="brainrot_god">
-            Brainrot God
-        </button>
+            <button data-category="rare">
+                Rare
+            </button>
 
-        <button data-category="secret">
-            Secret
-        </button>
+            <button data-category="epic">
+                Epic
+            </button>
 
-        <button data-category="og">
-            OG
-        </button>
+            <button data-category="legendary">
+                Legendary
+            </button>
+
+            <button data-category="mythic">
+                Mythic
+            </button>
+
+            <button data-category="brainrot_god">
+                Brainrot God
+            </button>
+
+            <button data-category="secret">
+                Secret
+            </button>
+
+            <button data-category="og">
+                OG
+            </button>
+
+        </div>
+
+
+        <!-- ====================================== -->
+        <!-- LISTA -->
+        <!-- ====================================== -->
+
+        <div id="grid"></div>
+
 
     </div>
-
-
-    <!-- ====================================== -->
-    <!-- LISTA -->
-    <!-- ====================================== -->
-
-    <div id="grid"></div>
-
 
 </div>
 
@@ -310,6 +502,8 @@
 
     let currentCategory = "all";
 
+    let authMode = "login"; // "login" ou "register"
+
 
     const totalEl =
         document.getElementById("total");
@@ -320,31 +514,306 @@
     const searchEl =
         document.getElementById("search");
 
-    const nomeEl =
-        document.getElementById("nome");
-
     const categoryButtons =
         document.querySelectorAll(
             "[data-category]"
         );
 
+    const authOverlay =
+        document.getElementById("auth-overlay");
+
+    const appContent =
+        document.getElementById("app-content");
+
+    const authForm =
+        document.getElementById("auth-form");
+
+    const authTitle =
+        document.getElementById("auth-title");
+
+    const authSubtitle =
+        document.getElementById("auth-subtitle");
+
+    const authMessage =
+        document.getElementById("auth-message");
+
+    const authUsername =
+        document.getElementById("auth-username");
+
+    const authPassword =
+        document.getElementById("auth-password");
+
+    const authConfirmWrap =
+        document.getElementById("auth-confirm-wrap");
+
+    const authConfirm =
+        document.getElementById("auth-confirm");
+
+    const authSubmitBtn =
+        document.getElementById("auth-submit-btn");
+
+    const authToggleText =
+        document.getElementById("auth-toggle-login-text");
+
+    const authToggleLink =
+        document.getElementById("auth-toggle-link");
+
+    const userLabel =
+        document.getElementById("user-label");
+
+    const logoutBtn =
+        document.getElementById("logout-btn");
+
 
     // ============================================
-    // CATEGORIA ATIVA
+    // MOSTRAR TELA DE LOGIN OU O SITE
     // ============================================
 
-    function setActiveCategoryBtn(category) {
+    function showAuthScreen() {
 
-        categoryButtons.forEach(btn => {
+        authOverlay.classList.remove("hidden");
 
-            btn.classList.toggle(
-                "active",
-                btn.dataset.category === category
-            );
-
-        });
+        appContent.classList.add("hidden");
 
     }
+
+
+    function showApp(username) {
+
+        authOverlay.classList.add("hidden");
+
+        appContent.classList.remove("hidden");
+
+        userLabel.textContent =
+            `👤 ${username}`;
+
+        loadData();
+
+    }
+
+
+    // ============================================
+    // ALTERNAR ENTRE LOGIN E CADASTRO
+    // ============================================
+
+    function setAuthMode(mode) {
+
+        authMode = mode;
+
+        authMessage.textContent = "";
+
+        authMessage.className = "auth-message";
+
+        if (mode === "register") {
+
+            authTitle.textContent = "Criar Conta";
+
+            authSubtitle.textContent =
+                "Cadastre-se para ver os memes";
+
+            authConfirmWrap.style.display = "block";
+
+            authConfirm.required = true;
+
+            authSubmitBtn.textContent = "Cadastrar";
+
+            authToggleText.innerHTML =
+                'Já tem conta? <a id="auth-toggle-link">Entrar</a>';
+
+        } else {
+
+            authTitle.textContent = "Entrar";
+
+            authSubtitle.textContent =
+                "Faça login para ver os memes";
+
+            authConfirmWrap.style.display = "none";
+
+            authConfirm.required = false;
+
+            authSubmitBtn.textContent = "Entrar";
+
+            authToggleText.innerHTML =
+                'Ainda não tem conta? <a id="auth-toggle-link">Cadastre-se</a>';
+
+        }
+
+        // Precisa religar o listener pois o link foi recriado
+        document
+            .getElementById("auth-toggle-link")
+            .addEventListener("click", () => {
+
+                setAuthMode(
+                    authMode === "login" ? "register" : "login"
+                );
+
+            });
+
+    }
+
+
+    // ============================================
+    // VERIFICAR SE JÁ ESTÁ LOGADO
+    // ============================================
+
+    async function checkSession() {
+
+        try {
+
+            const response =
+                await fetch("/api/session");
+
+            const data =
+                await response.json();
+
+            if (data.logged_in) {
+
+                showApp(data.email);
+
+            } else {
+
+                showAuthScreen();
+
+            }
+
+        } catch (err) {
+
+            console.error(err);
+
+            showAuthScreen();
+
+        }
+
+    }
+
+
+    // ============================================
+    // ENVIAR FORMULÁRIO DE LOGIN / CADASTRO
+    // ============================================
+
+    authForm.addEventListener("submit", async (e) => {
+
+        e.preventDefault();
+
+        const username =
+            authUsername.value.trim();
+
+        const password =
+            authPassword.value;
+
+        authMessage.textContent = "";
+
+        authMessage.className = "auth-message";
+
+        if (authMode === "register") {
+
+            const confirm =
+                authConfirm.value;
+
+            if (password !== confirm) {
+
+                authMessage.textContent =
+                    "As senhas não conferem.";
+
+                authMessage.className =
+                    "auth-message error";
+
+                return;
+
+            }
+
+        }
+
+        const endpoint =
+            authMode === "register"
+                ? "/api/register"
+                : "/api/login";
+
+        authSubmitBtn.disabled = true;
+
+        try {
+
+            const response =
+                await fetch(endpoint, {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        email: username,
+                        password
+                    })
+
+                });
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                authMessage.textContent =
+                    data.error || "Ocorreu um erro.";
+
+                authMessage.className =
+                    "auth-message error";
+
+                return;
+
+            }
+
+            authForm.reset();
+
+            showApp(data.email);
+
+        } catch (err) {
+
+            console.error(err);
+
+            authMessage.textContent =
+                "Não foi possível conectar ao servidor.";
+
+            authMessage.className =
+                "auth-message error";
+
+        } finally {
+
+            authSubmitBtn.disabled = false;
+
+        }
+
+    });
+
+
+    // ============================================
+    // LOGOUT
+    // ============================================
+
+    logoutBtn.addEventListener("click", async () => {
+
+        try {
+
+            await fetch("/api/logout", {
+                method: "POST"
+            });
+
+        } catch (err) {
+
+            console.error(err);
+
+        }
+
+        authUsername.value = "";
+
+        authPassword.value = "";
+
+        setAuthMode("login");
+
+        showAuthScreen();
+
+    });
 
 
     // ============================================
@@ -398,12 +867,22 @@
 
 
     // ============================================
-    // PEGAR NOME
+    // TRATAR RESPOSTA NÃO AUTORIZADA (SESSÃO EXPIROU)
     // ============================================
 
-    function getNomeUsuario() {
+    function tratarNaoAutorizado(response) {
 
-        return nomeEl.value.trim();
+        if (response.status === 401) {
+
+            setAuthMode("login");
+
+            showAuthScreen();
+
+            return true;
+
+        }
+
+        return false;
 
     }
 
@@ -413,10 +892,6 @@
     // ============================================
 
     async function registrarDado(dados) {
-
-        const nome =
-            getNomeUsuario();
-
 
         try {
 
@@ -433,8 +908,6 @@
 
                         body: JSON.stringify({
 
-                            nome: nome,
-
                             pesquisa:
                                 dados.pesquisa || "",
 
@@ -447,6 +920,10 @@
 
 
             if (!response.ok) {
+
+                if (tratarNaoAutorizado(response)) {
+                    return;
+                }
 
                 console.error(
                     "Erro ao gravar dados:",
@@ -651,6 +1128,10 @@
 
             if (!response.ok) {
 
+                if (tratarNaoAutorizado(response)) {
+                    return;
+                }
+
                 throw new Error(
                     "Resposta inválida"
                 );
@@ -746,6 +1227,10 @@
 
             if (!response.ok) {
 
+                if (tratarNaoAutorizado(response)) {
+                    return;
+                }
+
                 throw new Error(
                     "Resposta inválida"
                 );
@@ -774,6 +1259,24 @@
             );
 
         }
+
+    }
+
+
+    // ============================================
+    // CATEGORIA ATIVA
+    // ============================================
+
+    function setActiveCategoryBtn(category) {
+
+        categoryButtons.forEach(btn => {
+
+            btn.classList.toggle(
+                "active",
+                btn.dataset.category === category
+            );
+
+        });
 
     }
 
@@ -864,7 +1367,9 @@
     // INICIAR SITE
     // ============================================
 
-    loadData();
+    setAuthMode("login");
+
+    checkSession();
 
 
 </script>

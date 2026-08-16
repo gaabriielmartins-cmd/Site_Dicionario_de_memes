@@ -1,10 +1,28 @@
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 import json
 import os
+import re
+import secrets
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
+
+# ============================================
+# CHAVE SECRETA (necessária para usar sessões)
+# ============================================
+# Em produção, defina a variável de ambiente SECRET_KEY.
+# Se não existir, geramos uma aleatória (mas os logins somem
+# a cada reinício do servidor).
+
+app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+
+# Sessão dura enquanto o navegador estiver aberto (cookie de sessão).
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
 
 # ============================================
 # ARQUIVO DE DADOS DOS VISITANTES
@@ -56,6 +74,78 @@ def salvar_dado(dado):
             ensure_ascii=False,
             indent=4
         )
+
+
+# ============================================
+# ARQUIVO DE USUÁRIOS (LOGIN)
+# ============================================
+
+ARQUIVO_USUARIOS = "usuarios.json"
+
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def criar_arquivo_usuarios():
+    """Cria o arquivo de usuários caso ainda não exista."""
+
+    if not os.path.exists(ARQUIVO_USUARIOS):
+        with open(
+            ARQUIVO_USUARIOS,
+            "w",
+            encoding="utf-8"
+        ) as arquivo:
+            json.dump({}, arquivo, ensure_ascii=False, indent=4)
+
+
+def carregar_usuarios():
+    """Carrega o dicionário de usuários {username: {...}}."""
+
+    criar_arquivo_usuarios()
+
+    try:
+        with open(
+            ARQUIVO_USUARIOS,
+            "r",
+            encoding="utf-8"
+        ) as arquivo:
+            return json.load(arquivo)
+
+    except (json.JSONDecodeError, FileNotFoundError):
+        return {}
+
+
+def salvar_usuarios(usuarios):
+    """Salva o dicionário de usuários no arquivo."""
+
+    with open(
+        ARQUIVO_USUARIOS,
+        "w",
+        encoding="utf-8"
+    ) as arquivo:
+        json.dump(
+            usuarios,
+            arquivo,
+            ensure_ascii=False,
+            indent=4
+        )
+
+
+def login_required(f):
+    """Decorator que bloqueia o acesso a rotas sem login ativo."""
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+
+        if not session.get("email"):
+
+            return jsonify({
+                "error": "Você precisa fazer login."
+            }), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
 
 # ============================================
 # SUAS LISTAS
@@ -519,10 +609,137 @@ brainrots = list(dict.fromkeys(
 
 
 # ============================================
+# API - CADASTRO
+# ============================================
+
+@app.route("/api/register", methods=["POST"])
+def register():
+
+    dados = request.get_json(silent=True) or {}
+
+    email = (dados.get("email") or "").strip()
+    password = dados.get("password") or ""
+
+    if not email or not password:
+
+        return jsonify({
+            "error": "Informe e-mail e senha."
+        }), 400
+
+    if not EMAIL_REGEX.match(email):
+
+        return jsonify({
+            "error": "Informe um e-mail válido."
+        }), 400
+
+    if len(password) < 6:
+
+        return jsonify({
+            "error": "A senha precisa ter pelo menos 6 caracteres."
+        }), 400
+
+    usuarios = carregar_usuarios()
+
+    chave = email.lower()
+
+    if chave in usuarios:
+
+        return jsonify({
+            "error": "Já existe uma conta com esse e-mail."
+        }), 409
+
+    usuarios[chave] = {
+        "email": email,
+        "password_hash": generate_password_hash(password),
+        "criado_em": datetime.now(
+            ZoneInfo("America/Sao_Paulo")
+        ).strftime("%d/%m/%Y %H:%M:%S")
+    }
+
+    salvar_usuarios(usuarios)
+
+    # Login automático após o cadastro
+    session["email"] = email
+
+    return jsonify({
+        "message": "Cadastro realizado com sucesso!",
+        "email": email
+    }), 201
+
+
+# ============================================
+# API - LOGIN
+# ============================================
+
+@app.route("/api/login", methods=["POST"])
+def login():
+
+    dados = request.get_json(silent=True) or {}
+
+    email = (dados.get("email") or "").strip()
+    password = dados.get("password") or ""
+
+    if not email or not password:
+
+        return jsonify({
+            "error": "Informe e-mail e senha."
+        }), 400
+
+    usuarios = carregar_usuarios()
+
+    usuario = usuarios.get(email.lower())
+
+    if not usuario or not check_password_hash(
+        usuario["password_hash"], password
+    ):
+
+        return jsonify({
+            "error": "E-mail ou senha inválidos."
+        }), 401
+
+    session["email"] = usuario["email"]
+
+    return jsonify({
+        "message": "Login realizado com sucesso!",
+        "email": usuario["email"]
+    })
+
+
+# ============================================
+# API - LOGOUT
+# ============================================
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+
+    session.pop("email", None)
+
+    return jsonify({
+        "message": "Logout realizado com sucesso!"
+    })
+
+
+# ============================================
+# API - VERIFICAR SESSÃO
+# ============================================
+
+@app.route("/api/session", methods=["GET"])
+def get_session():
+
+    email = session.get("email")
+
+    return jsonify({
+        "logged_in": bool(email),
+        "email": email
+    })
+
+
+# ============================================
 # API - TODOS OS BRAINROTS
 # ============================================
 
 @app.route("/api/brainrots", methods=["GET"])
+@login_required
 def get_brainrots():
 
     return jsonify({
@@ -536,6 +753,7 @@ def get_brainrots():
 # ============================================
 
 @app.route("/api/brainrots/<category>", methods=["GET"])
+@login_required
 def get_category(category):
 
     if category not in categories:
@@ -559,6 +777,7 @@ def get_category(category):
 # ============================================
 
 @app.route("/api/search", methods=["GET"])
+@login_required
 def search():
 
     query = request.args.get("q", "").lower().strip()
@@ -597,17 +816,11 @@ def home():
 # ============================================
 
 @app.route("/api/gravar", methods=["POST"])
+@login_required
 def gravar_dados():
 
     # Captura os dados enviados pelo JavaScript
-    dados_recebidos = request.get_json()
-
-    # Verifica se recebeu alguma informação
-    if not dados_recebidos:
-
-        return jsonify({
-            "error": "Nenhum dado enviado"
-        }), 400
+    dados_recebidos = request.get_json(silent=True) or {}
 
     try:
 
@@ -631,9 +844,6 @@ def gravar_dados():
         # HORÁRIO
         # ========================================
 
-        from datetime import datetime
-        from zoneinfo import ZoneInfo
-
         horario = datetime.now(
             ZoneInfo("America/Sao_Paulo")
         ).strftime("%d/%m/%Y %H:%M:%S")
@@ -641,9 +851,11 @@ def gravar_dados():
         # ========================================
         # MONTAR OS DADOS
         # ========================================
+        # O nome vem da sessão (usuário logado), não do
+        # que o cliente envia — assim não dá para forjar.
 
         registro = {
-            "nome": dados_recebidos.get("nome", ""),
+            "usuario": session.get("email"),
             "ip": ip,
             "pesquisa": dados_recebidos.get("pesquisa", ""),
             "brainrot_clicado": dados_recebidos.get(
@@ -685,21 +897,13 @@ def gravar_dados():
             "error": f"Falha ao salvar os dados: {str(e)}"
         }), 500
 
+
 # ============================================
-# CRIAR JSON AUTOMATICAMENTE
+# CRIAR ARQUIVOS AUTOMATICAMENTE
 # ============================================
 
-import os
-
-if not os.path.exists("dados_cliente.json"):
-
-    with open(
-        "dados_cliente.json",
-        "w",
-        encoding="utf-8"
-    ) as arquivo:
-
-        arquivo.write("")
+criar_arquivo_dados()
+criar_arquivo_usuarios()
 
 
 # ============================================
