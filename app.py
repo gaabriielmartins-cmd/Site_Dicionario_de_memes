@@ -1,5 +1,7 @@
-from flask import Flask, jsonify, send_from_directory, request, session
+from flask import Flask, jsonify, send_from_directory, request, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
+from authlib.integrations.flask_client import OAuth
+from dotenv import load_dotenv
 from functools import wraps
 import json
 import os
@@ -7,6 +9,14 @@ import re
 import secrets
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+# ============================================
+# CARREGAR VARIÁVEIS DO ARQUIVO .env
+# ============================================
+# Lê o arquivo .env (se existir) e joga as variáveis dentro de
+# os.environ, como se você tivesse rodado $env:VAR = "..." antes.
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -22,6 +32,36 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 # Sessão dura enquanto o navegador estiver aberto (cookie de sessão).
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+
+# ============================================
+# LOGIN COM GOOGLE (OAuth2 / OpenID Connect)
+# ============================================
+# Você precisa criar credenciais OAuth no Google Cloud Console
+# (console.cloud.google.com -> APIs & Services -> Credentials)
+# e definir as variáveis de ambiente abaixo:
+#
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#
+# Nas "Authorized redirect URIs" do Google, cadastre:
+#   http://localhost:5000/api/login/google/callback   (dev)
+#   https://SEU_DOMINIO/api/login/google/callback      (produção)
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+oauth = OAuth(app)
+
+google = oauth.register(
+    name="google",
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={
+        "scope": "openid email profile"
+    },
+)
 
 
 # ============================================
@@ -736,6 +776,7 @@ def register():
     usuarios[chave] = {
         "email": email,
         "password_hash": generate_password_hash(password),
+        "provider": "local",
         "criado_em": datetime.now(
             ZoneInfo("America/Sao_Paulo")
         ).strftime("%d/%m/%Y %H:%M:%S")
@@ -774,7 +815,14 @@ def login():
 
     usuario = usuarios.get(email.lower())
 
-    if not usuario or not check_password_hash(
+    # Contas criadas via Google não têm senha local.
+    if not usuario or not usuario.get("password_hash"):
+
+        return jsonify({
+            "error": "E-mail ou senha inválidos."
+        }), 401
+
+    if not check_password_hash(
         usuario["password_hash"], password
     ):
 
@@ -788,6 +836,75 @@ def login():
         "message": "Login realizado com sucesso!",
         "email": usuario["email"]
     })
+
+
+# ============================================
+# API - LOGIN / CADASTRO COM GOOGLE
+# ============================================
+
+@app.route("/api/login/google")
+def login_google():
+
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+
+        return jsonify({
+            "error": (
+                "Login com Google não configurado. Defina "
+                "GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET."
+            )
+        }), 500
+
+    redirect_uri = url_for(
+        "auth_google_callback", _external=True
+    )
+
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route("/api/login/google/callback")
+def auth_google_callback():
+
+    try:
+
+        token = google.authorize_access_token()
+
+        # Vem embutido no token quando o escopo "openid" é usado.
+        user_info = token.get("userinfo")
+
+        if not user_info:
+            user_info = google.parse_id_token(token)
+
+        email = (user_info.get("email") or "").strip()
+
+        # Só aceita contas com e-mail já verificado pelo Google.
+        if not email or not user_info.get("email_verified", True):
+
+            return redirect("/?auth_error=google")
+
+    except Exception:
+
+        return redirect("/?auth_error=google")
+
+    usuarios = carregar_usuarios()
+
+    chave = email.lower()
+
+    if chave not in usuarios:
+
+        usuarios[chave] = {
+            "email": email,
+            "password_hash": None,
+            "provider": "google",
+            "criado_em": datetime.now(
+                ZoneInfo("America/Sao_Paulo")
+            ).strftime("%d/%m/%Y %H:%M:%S")
+        }
+
+        salvar_usuarios(usuarios)
+
+    session["email"] = usuarios[chave]["email"]
+
+    return redirect("/")
 
 
 # ============================================

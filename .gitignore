@@ -1,0 +1,17 @@
+# Segredos - nunca subir para o Git
+.env
+
+# Ambiente virtual
+.venv/
+mysite/.venv/
+
+# Dados gerados pelo app
+usuarios.json
+dados_cliente.json
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# etc
+requirements.txt
