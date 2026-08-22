@@ -7,6 +7,7 @@ import json
 import os
 import re
 import secrets
+import unicodedata
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -32,6 +33,10 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 # Sessão dura enquanto o navegador estiver aberto (cookie de sessão).
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+# Limite de tamanho para uploads (imagens dos memes). Qualquer
+# requisição maior que isso é rejeitada automaticamente pelo Flask.
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB
 
 
 # ============================================
@@ -68,7 +73,18 @@ google = oauth.register(
 # ARQUIVO DE DADOS DOS VISITANTES
 # ============================================
 
-ARQUIVO_DADOS = "dados_cliente.json"
+# ============================================
+# PASTA BASE DO PROJETO
+# ============================================
+# Ancoramos todos os arquivos de dados na pasta onde o app.py
+# realmente está, e não na pasta de onde o comando "python app.py"
+# foi executado. Isso evita o problema clássico de arquivos (JSON,
+# imagens) aparecerem "fora" da pasta do projeto quando você roda
+# o servidor a partir de um diretório diferente.
+
+PASTA_BASE = os.path.dirname(os.path.abspath(__file__))
+
+ARQUIVO_DADOS = os.path.join(PASTA_BASE, "dados_cliente.json")
 
 
 def criar_arquivo_dados():
@@ -120,7 +136,7 @@ def salvar_dado(dado):
 # ARQUIVO DE USUÁRIOS (LOGIN)
 # ============================================
 
-ARQUIVO_USUARIOS = "usuarios.json"
+ARQUIVO_USUARIOS = os.path.join(PASTA_BASE, "usuarios.json")
 
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -820,6 +836,139 @@ brainrots = list(dict.fromkeys(
 
 
 # ============================================
+# UPLOAD DE IMAGENS DOS MEMES
+# ============================================
+# Permite que o próprio usuário logado envie/atualize a imagem
+# de um brainrot, direto pelo modal no site.
+
+# IMPORTANTE: usamos app.static_folder (e não um caminho relativo
+# tipo "static/images") porque um caminho relativo depende da pasta
+# de onde você RODA o "python app.py" — se você rodar de um lugar
+# diferente da pasta do projeto, a imagem seria salva em outro canto
+# e o Flask nunca a encontraria para servir. app.static_folder
+# sempre aponta para a pasta "static" ao lado do app.py, não importa
+# de onde o comando foi executado.
+
+PASTA_IMAGENS = os.path.join(app.static_folder, "images")
+
+EXTENSOES_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
+
+
+def slugify(nome):
+    """Mesma lógica do slugify() do JavaScript: minúsculo, sem
+    acento, espaços e símbolos viram hífen. Usado para nomear o
+    arquivo de imagem de cada brainrot."""
+
+    nome = nome.lower()
+
+    nome = unicodedata.normalize("NFD", nome)
+
+    nome = nome.encode("ascii", "ignore").decode("utf-8")
+
+    nome = re.sub(r"[^a-z0-9]+", "-", nome)
+
+    return nome.strip("-")
+
+
+def extensao_permitida(nome_arquivo):
+
+    return (
+        "." in nome_arquivo
+        and nome_arquivo.rsplit(".", 1)[1].lower() in EXTENSOES_PERMITIDAS
+    )
+
+
+@app.route("/api/upload-imagem", methods=["POST"])
+@login_required
+def upload_imagem():
+
+    nome = (request.form.get("nome") or "").strip()
+
+    if not nome:
+
+        return jsonify({
+            "error": "Nome do meme não informado."
+        }), 400
+
+    # Só aceita upload para memes que realmente existem na lista,
+    # pra evitar que qualquer nome vire um arquivo no servidor.
+    if nome not in brainrots:
+
+        return jsonify({
+            "error": "Meme não encontrado."
+        }), 404
+
+    arquivo = request.files.get("imagem")
+
+    if not arquivo or arquivo.filename == "":
+
+        return jsonify({
+            "error": "Nenhum arquivo enviado."
+        }), 400
+
+    if not extensao_permitida(arquivo.filename):
+
+        return jsonify({
+            "error": "Formato não suportado. Envie um JPG, PNG ou WEBP."
+        }), 400
+
+    slug = slugify(nome)
+
+    if not slug:
+
+        return jsonify({
+            "error": "Nome de meme inválido."
+        }), 400
+
+    extensao = arquivo.filename.rsplit(".", 1)[1].lower()
+
+    os.makedirs(PASTA_IMAGENS, exist_ok=True)
+
+    # Remove imagens antigas desse meme em outras extensões, pra
+    # não ficar lixo acumulado (ex: trocou de .png pra .jpg).
+    for ext in EXTENSOES_PERMITIDAS:
+
+        caminho_antigo = os.path.join(
+            PASTA_IMAGENS, f"{slug}.{ext}"
+        )
+
+        if os.path.exists(caminho_antigo):
+            os.remove(caminho_antigo)
+
+    caminho_final = os.path.join(
+        PASTA_IMAGENS, f"{slug}.{extensao}"
+    )
+
+    try:
+
+        arquivo.save(caminho_final)
+
+    except Exception as e:
+
+        return jsonify({
+            "error": f"Falha ao salvar a imagem: {str(e)}"
+        }), 500
+
+    # Log no terminal pra você confirmar o caminho exato onde
+    # a imagem foi salva (útil se ela não aparecer no site).
+    print(f"🖼️  Imagem salva em: {os.path.abspath(caminho_final)}")
+
+    return jsonify({
+        "message": "Imagem enviada com sucesso!",
+        "arquivo": f"{slug}.{extensao}",
+        "caminho": os.path.abspath(caminho_final)
+    }), 201
+
+
+@app.errorhandler(413)
+def arquivo_grande_demais(erro):
+
+    return jsonify({
+        "error": "Arquivo muito grande. Tamanho máximo: 5MB."
+    }), 413
+
+
+# ============================================
 # API - CADASTRO
 # ============================================
 
@@ -1158,7 +1307,7 @@ def gravar_dados():
         # ========================================
 
         with open(
-            "dados_cliente.json",
+            ARQUIVO_DADOS,
             "a",
             encoding="utf-8"
         ) as arquivo:

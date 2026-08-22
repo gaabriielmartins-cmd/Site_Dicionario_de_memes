@@ -342,6 +342,120 @@
             display: none;
         }
 
+        /* ============================================ */
+        /* MODAL DE IMAGEM DO MEME */
+        /* ============================================ */
+
+        #meme-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        #meme-modal.hidden {
+            display: none;
+        }
+
+        .meme-modal-box {
+            background: #181818;
+            border: 1px solid #2a2a2a;
+            border-radius: 14px;
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            text-align: center;
+        }
+
+        .meme-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #292929;
+            border: none;
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .meme-modal-close:hover {
+            background: #444;
+        }
+
+        .meme-modal-img-wrap {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .meme-modal-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .meme-modal-placeholder {
+            font-size: 60px;
+        }
+
+        .meme-modal-name {
+            padding: 18px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .meme-modal-category {
+            padding-top: 18px;
+            color: #aaa;
+            font-size: 13px;
+            text-transform: capitalize;
+        }
+
+        .meme-modal-upload {
+            padding: 0 18px 20px;
+        }
+
+        .meme-upload-btn {
+            width: 100%;
+            background: #292929;
+            border: 1px dashed #444;
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        .meme-upload-btn:hover {
+            background: #333;
+            border-color: #666;
+        }
+
+        .meme-upload-status {
+            margin-top: 10px;
+            font-size: 13px;
+            min-height: 16px;
+        }
+
+        .meme-upload-status.success {
+            color: #7bd67b;
+        }
+
+        .meme-upload-status.error {
+            color: #ff6b6b;
+        }
+
     </style>
 </head>
 
@@ -442,6 +556,52 @@
                 Ainda não tem conta?
                 <a id="auth-toggle-link">Cadastre-se</a>
             </span>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ====================================== -->
+<!-- MODAL COM A IMAGEM DO MEME -->
+<!-- ====================================== -->
+
+<div id="meme-modal" class="hidden">
+
+    <div class="meme-modal-box">
+
+        <button id="meme-modal-close" class="meme-modal-close" type="button">
+            ✕
+        </button>
+
+        <div id="meme-modal-img-wrap" class="meme-modal-img-wrap">
+            <!-- img ou placeholder entram aqui via JS -->
+        </div>
+
+        <div id="meme-modal-name" class="meme-modal-name"></div>
+
+        <div id="meme-modal-category" class="meme-modal-category"></div>
+
+        <div class="meme-modal-upload">
+
+            <input
+                type="file"
+                id="meme-upload-input"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+            >
+
+            <button
+                id="meme-upload-btn"
+                type="button"
+                class="meme-upload-btn"
+            >
+                📤 Adicionar / trocar imagem
+            </button>
+
+            <div id="meme-upload-status" class="meme-upload-status"></div>
 
         </div>
 
@@ -634,6 +794,299 @@
 
     const logoutBtn =
         document.getElementById("logout-btn");
+
+
+    // ============================================
+    // MODAL DE IMAGEM
+    // ============================================
+
+    const memeModal =
+        document.getElementById("meme-modal");
+
+    const memeModalImgWrap =
+        document.getElementById("meme-modal-img-wrap");
+
+    const memeModalName =
+        document.getElementById("meme-modal-name");
+
+    const memeModalCategory =
+        document.getElementById("meme-modal-category");
+
+    const memeModalClose =
+        document.getElementById("meme-modal-close");
+
+    const memeUploadInput =
+        document.getElementById("meme-upload-input");
+
+    const memeUploadBtn =
+        document.getElementById("meme-upload-btn");
+
+    const memeUploadStatus =
+        document.getElementById("meme-upload-status");
+
+
+    // Guarda o nome do meme que está aberto no modal no momento,
+    // para saber pra qual meme vale o upload de imagem.
+
+    let modalMemeAtual = "";
+
+
+    // Ordem de extensões que tentamos carregar (a primeira que
+    // existir é usada).
+
+    const EXTENSOES_IMAGEM =
+        ["jpg", "jpeg", "png", "webp"];
+
+
+    // Transforma "Tralalero Tralala" em "tralalero-tralala"
+    // (é assim que o arquivo de imagem deve se chamar
+    // dentro de /static/images/)
+
+    function slugify(nome) {
+
+        return nome
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // remove acentos
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
+
+    }
+
+
+    function abrirModalImagem(nomeBrainrot, categoria) {
+
+        modalMemeAtual =
+            nomeBrainrot;
+
+        memeModalName.textContent =
+            nomeBrainrot;
+
+        memeModalCategory.textContent =
+            categoria
+                ? categoria.replace(/_/g, " ")
+                : "";
+
+        memeUploadStatus.textContent = "";
+
+        memeUploadStatus.className =
+            "meme-upload-status";
+
+        carregarImagemComFallback(
+            slugify(nomeBrainrot),
+            EXTENSOES_IMAGEM
+        );
+
+        memeModal.classList.remove("hidden");
+
+    }
+
+
+    // ============================================
+    // CARREGAR IMAGEM TENTANDO VÁRIAS EXTENSÕES
+    // ============================================
+    // Como o usuário pode enviar jpg, png ou webp, tentamos
+    // cada extensão em ordem até uma funcionar. Se nenhuma
+    // existir, mostramos o placeholder.
+
+    function carregarImagemComFallback(
+        slug,
+        extensoesRestantes,
+        cacheBuster
+    ) {
+
+        if (!extensoesRestantes.length) {
+
+            memeModalImgWrap.innerHTML = `
+                <div class="meme-modal-placeholder">
+                    🖼️
+                </div>
+            `;
+
+            return;
+
+        }
+
+        const [
+            extensaoAtual,
+            ...proximasExtensoes
+        ] = extensoesRestantes;
+
+        const query =
+            cacheBuster
+                ? `?v=${cacheBuster}`
+                : "";
+
+        const img =
+            new Image();
+
+        img.alt = slug;
+
+        img.onload = () => {
+
+            memeModalImgWrap.innerHTML = "";
+
+            memeModalImgWrap.appendChild(img);
+
+        };
+
+        img.onerror = () => {
+
+            carregarImagemComFallback(
+                slug,
+                proximasExtensoes,
+                cacheBuster
+            );
+
+        };
+
+        img.src =
+            `/static/images/${slug}.${extensaoAtual}${query}`;
+
+    }
+
+
+    // ============================================
+    // ENVIAR IMAGEM ESCOLHIDA PELO USUÁRIO
+    // ============================================
+
+    async function enviarImagem(arquivo) {
+
+        memeUploadStatus.textContent =
+            "Enviando...";
+
+        memeUploadStatus.className =
+            "meme-upload-status";
+
+        const formData =
+            new FormData();
+
+        formData.append("nome", modalMemeAtual);
+
+        formData.append("imagem", arquivo);
+
+        try {
+
+            const response =
+                await fetch("/api/upload-imagem", {
+
+                    method: "POST",
+
+                    body: formData
+
+                });
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                if (tratarNaoAutorizado(response)) {
+                    return;
+                }
+
+                memeUploadStatus.textContent =
+                    data.error || "Erro ao enviar imagem.";
+
+                memeUploadStatus.className =
+                    "meme-upload-status error";
+
+                return;
+
+            }
+
+            memeUploadStatus.textContent =
+                "Imagem atualizada! ✅";
+
+            memeUploadStatus.className =
+                "meme-upload-status success";
+
+            // Recarrega a imagem já com cache-busting, pra
+            // aparecer a nova imagem na hora.
+
+            carregarImagemComFallback(
+                slugify(modalMemeAtual),
+                EXTENSOES_IMAGEM,
+                Date.now()
+            );
+
+        } catch (err) {
+
+            console.error(err);
+
+            memeUploadStatus.textContent =
+                "Não foi possível enviar a imagem.";
+
+            memeUploadStatus.className =
+                "meme-upload-status error";
+
+        }
+
+    }
+
+
+    memeUploadBtn.addEventListener(
+        "click",
+        () => {
+
+            memeUploadInput.click();
+
+        }
+    );
+
+
+    memeUploadInput.addEventListener(
+        "change",
+        async () => {
+
+            const arquivo =
+                memeUploadInput.files[0];
+
+            if (!arquivo) {
+                return;
+            }
+
+            await enviarImagem(arquivo);
+
+            memeUploadInput.value = "";
+
+        }
+    );
+
+
+    function fecharModalImagem() {
+
+        memeModal.classList.add("hidden");
+
+        memeModalImgWrap.innerHTML = "";
+
+    }
+
+
+    memeModalClose.addEventListener(
+        "click",
+        fecharModalImagem
+    );
+
+
+    // Fecha clicando fora da caixinha
+    memeModal.addEventListener("click", (e) => {
+
+        if (e.target === memeModal) {
+            fecharModalImagem();
+        }
+
+    });
+
+
+    // Fecha com ESC
+    document.addEventListener("keydown", (e) => {
+
+        if (e.key === "Escape") {
+            fecharModalImagem();
+        }
+
+    });
 
 
     // ============================================
@@ -1101,6 +1554,9 @@
             const nomeBrainrot =
                 item.name || item;
 
+            const categoriaBrainrot =
+                item.category || currentCategory;
+
 
             const card =
                 document.createElement("div");
@@ -1131,6 +1587,14 @@
                             nomeBrainrot
 
                     });
+
+
+                    abrirModalImagem(
+                        nomeBrainrot,
+                        categoriaBrainrot === "all"
+                            ? ""
+                            : categoriaBrainrot
+                    );
 
                 }
             );
